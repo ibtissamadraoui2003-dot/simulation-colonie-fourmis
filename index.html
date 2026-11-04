@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>La colonie de fourmis : intelligence collective</title>
+<style>
+:root{--bg:#f3efe6;--fg:#2a2118;--mute:#6d6354;--card:#e9e3d4;--line:#cfc6b2;--cv:#d9cdb0;--acc:#b5432a;--ant:#1d1710;--home:20,90,160;--food:30,140,70;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17130e;--fg:#efe7d6;--mute:#a89d88;--card:#241e16;--line:#3a3124;--cv:#0f0c08;--acc:#e08a4a;--ant:#f3e9d2;--home:90,160,240;--food:90,210,120}}
+:root[data-theme="dark"]{--bg:#17130e;--fg:#efe7d6;--mute:#a89d88;--card:#241e16;--line:#3a3124;--cv:#0f0c08;--acc:#e08a4a;--ant:#f3e9d2;--home:90,160,240;--food:90,210,120}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 Georgia,"Iowan Old Style",serif}
+main{max-width:980px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:clamp(1.7rem,5vw,2.6rem);line-height:1.1;margin:0 0 8px;letter-spacing:-.01em}
+.lead{color:var(--mute);max-width:62ch;margin:0 0 20px}
+canvas{display:block;width:100%;height:auto;background:var(--cv);border:1px solid var(--line);border-radius:6px;touch-action:none;cursor:crosshair}
+.bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:12px 0}
+button{font:inherit;font-size:.9rem;padding:6px 12px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px;cursor:pointer}
+button[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+label{font-size:.9rem;display:flex;align-items:center;gap:8px}
+input[type=range]{width:130px;accent-color:var(--acc)}
+.stats{display:flex;gap:24px;flex-wrap:wrap;margin:8px 0 4px}
+.stats b{font-size:1.6rem;display:block;line-height:1.1}
+.stats span{color:var(--mute);font-size:.85rem}
+.legend{font-size:.85rem;color:var(--mute);display:flex;gap:16px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:28px}
+.grid div{border-top:3px solid var(--acc);padding-top:8px}
+.grid h2{font-size:1.1rem;margin:0 0 4px}
+.grid p{margin:0;color:var(--mute);font-size:.93rem}
+</style>
+</head>
+<body>
+<main>
+<h1>Une colonie qui pense sans chef</h1>
+<p class="lead">Chaque fourmi suit des règles très simples. Pourtant, ensemble, elles trouvent le chemin vers la nourriture. Placez de la nourriture, ajoutez des obstacles et observez la piste se former.</p>
+
+<canvas id="c" width="640" height="420" aria-label="Simulation de colonie de fourmis"></canvas>
+
+<div class="stats" aria-live="polite">
+<div><b id="s1">0</b><span>nourriture rapportée</span></div>
+<div><b id="s2">0</b><span>fourmis chargées</span></div>
+<div><b id="s3">0</b><span>par 10 secondes</span></div>
+</div>
+<div class="legend"><span><i style="background:rgb(var(--home))"></i>phéromone de retour au nid</span><span><i style="background:rgb(var(--food))"></i>phéromone de nourriture</span><span><i style="background:#e0902a"></i>nourriture</span></div>
+
+<div class="bar" role="group" aria-label="Outils de dessin">
+<button data-t="food" aria-pressed="true">Nourriture</button>
+<button data-t="wall" aria-pressed="false">Obstacle</button>
+<button data-t="erase" aria-pressed="false">Gomme</button>
+<button id="pause">Pause</button>
+<button id="reset">Réinitialiser</button>
+</div>
+<div class="bar">
+<label><input type="checkbox" id="ph" checked> Phéromones actives</label>
+<label>Fourmis <input type="range" id="n" min="20" max="500" value="200"><output id="nv">200</output></label>
+<label>Évaporation <input type="range" id="ev" min="1" max="30" value="8"><output id="evv">8</output></label>
+</div>
+
+<div class="grid">
+<div><h2>Des règles simples</h2><p>Une fourmi explore au hasard, dépose une trace chimique, puis suit les traces les plus fortes. Aucune ne connaît le plan global.</p></div>
+<div><h2>La stigmergie</h2><p>Les fourmis communiquent en modifiant leur environnement. Les pistes courtes sont renforcées plus vite, les longues s’évaporent.</p></div>
+<div><h2>L’émergence</h2><p>Décochez les phéromones : sans communication, la colonie perd son efficacité. L’intelligence vient de l’interaction, pas des individus.</p></div>
+</div>
+</main>
+
+<script>
+(function(){
+var GW=160,GH=105,S=4,NX=22,NY=52;
+var cv=document.getElementById("c"),ctx=cv.getContext("2d");
+var off=document.createElement("canvas");off.width=GW;off.height=GH;
+var octx=off.getContext("2d"),img=octx.createImageData(GW,GH);
+var homeP,foodP,wall,food,ants,delivered,log,tool="food",paused=false,down=false;
+var ph=document.getElementById("ph"),nI=document.getElementById("n"),evI=document.getElementById("ev");
+var cs;function colors(){cs=getComputedStyle(document.documentElement)}colors();
+if(window.matchMedia)matchMedia("(prefers-color-scheme: dark)").addEventListener("change",colors);
+
+function newAnt(){return{x:NX,y:NY,a:Math.random()*6.283,f:false,s:1}}
+function paint(cx,cy,r,arr,val){for(var y=-r;y<=r;y++)for(var x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;var X=cx+x,Y=cy+y;if(X<1||Y<1||X>=GW-1||Y>=GH-1)continue;arr[Y*GW+X]=val}}
+function reset(){
+homeP=new Float32Array(GW*GH);foodP=new Float32Array(GW*GH);wall=new Uint8Array(GW*GH);food=new Float32Array(GW*GH);
+paint(132,24,4,food,60);paint(126,84,4,food,60);
+ants=[];for(var i=0;i<+nI.value;i++)ants.push(newAnt());
+delivered=0;log=[];
+}
+function box(arr,x,y){var s=0,X=x|0,Y=y|0;if(X<1||Y<1||X>=GW-1||Y>=GH-1)return -1;if(wall[Y*GW+X])return -1;
+for(var j=-1;j<=1;j++)for(var i=-1;i<=1;i++)s+=arr[(Y+j)*GW+X+i];return s}
+function sense(an,ang,on){
+var x=an.x+Math.cos(ang)*5,y=an.y+Math.sin(ang)*5;
+var v=box(on?(an.f?homeP:foodP):homeP,x,y);if(v<0)return -1;
+if(!an.f&&box(food,x,y)>0)v+=20;
+if(an.f&&Math.hypot(x-NX,y-NY)<9)v+=20;
+return v}
+function dep(arr,x,y,v){var X=x|0,Y=y|0,i=Y*GW+X;arr[i]=Math.min(1,arr[i]+v);
+arr[i-1]=Math.min(1,arr[i-1]+v*.5);arr[i+1]=Math.min(1,arr[i+1]+v*.5);arr[i-GW]=Math.min(1,arr[i-GW]+v*.5);arr[i+GW]=Math.min(1,arr[i+GW]+v*.5)}
+function step(an,on){
+an.a+=(Math.random()-.5)*.5;
+if(on){var l=sense(an,an.a-.6,on),m=sense(an,an.a,on),r=sense(an,an.a+.6,on);
+var mx=Math.max(l,m,r);if(mx>.15){if(m>=l&&m>=r){}else if(l>r)an.a-=.3;else an.a+=.3}}
+var nx=an.x+Math.cos(an.a),ny=an.y+Math.sin(an.a),X=nx|0,Y=ny|0;
+if(X<2||Y<2||X>=GW-2||Y>=GH-2||wall[Y*GW+X]){an.a+=Math.PI*(.5+Math.random());return}
+an.x=nx;an.y=ny;var i=Y*GW+X;
+if(on){an.s*=.994;dep(an.f?foodP:homeP,an.x,an.y,an.s*.3)}
+if(!an.f&&food[i]>0){food[i]--;an.f=true;an.s=1;an.a+=Math.PI}
+else if(an.f&&Math.hypot(an.x-NX,an.y-NY)<4){an.f=false;an.s=1;an.a+=Math.PI;delivered++;log.push(performance.now())}
+}
+function tick(){
+var on=ph.checked,k=1-evI.value/1000,i;
+for(var n=0;n<ants.length;n++)step(ants[n],on);
+for(i=0;i<homeP.length;i++){homeP[i]*=k;foodP[i]*=k}
+}
+function draw(){
+var d=img.data,hc=cs.getPropertyValue("--home").split(",").map(Number),fc=cs.getPropertyValue("--food").split(",").map(Number);
+for(var i=0;i<GW*GH;i++){var p=i*4,h=homeP[i],f=foodP[i],r,g,b,a;
+if(wall[i]){r=g=b=120;a=255}
+else if(food[i]>0){r=224;g=144;b=42;a=255}
+else if(h<.02&&f<.02){a=0;r=g=b=0}
+else{var t=h+f;r=(hc[0]*h+fc[0]*f)/t;g=(hc[1]*h+fc[1]*f)/t;b=(hc[2]*h+fc[2]*f)/t;a=Math.min(255,t*400)}
+d[p]=r;d[p+1]=g;d[p+2]=b;d[p+3]=a}
+octx.putImageData(img,0,0);
+ctx.clearRect(0,0,cv.width,cv.height);ctx.imageSmoothingEnabled=false;ctx.drawImage(off,0,0,cv.width,cv.height);
+ctx.fillStyle=cs.getPropertyValue("--acc");ctx.beginPath();ctx.arc(NX*S,NY*S,14,0,6.283);ctx.fill();
+ctx.fillStyle=cs.getPropertyValue("--ant");var c=0;
+for(var n=0;n<ants.length;n++){var a2=ants[n];if(a2.f)c++;ctx.fillRect(a2.x*S-1.5,a2.y*S-1.5,3,3);if(a2.f){ctx.fillStyle="#e0902a";ctx.fillRect(a2.x*S+Math.cos(a2.a)*3-1,a2.y*S+Math.sin(a2.a)*3-1,3,3);ctx.fillStyle=cs.getPropertyValue("--ant")}}
+document.getElementById("s1").textContent=delivered;document.getElementById("s2").textContent=c;
+var now=performance.now();while(log.length&&now-log[0]>10000)log.shift();document.getElementById("s3").textContent=log.length;
+}
+function loop(){if(!paused)tick();draw();requestAnimationFrame(loop)}
+function pos(e){var r=cv.getBoundingClientRect();return[Math.floor((e.clientX-r.left)/r.width*GW),Math.floor((e.clientY-r.top)/r.height*GH)]}
+function act(e){var p=pos(e);
+if(tool==="food")paint(p[0],p[1],3,food,60);
+else if(tool==="wall")paint(p[0],p[1],2,wall,1);
+else{paint(p[0],p[1],4,wall,0);paint(p[0],p[1],4,food,0)}}
+cv.addEventListener("pointerdown",function(e){down=true;cv.setPointerCapture(e.pointerId);act(e)});
+cv.addEventListener("pointermove",function(e){if(down)act(e)});
+cv.addEventListener("pointerup",function(){down=false});
+document.querySelectorAll("[data-t]").forEach(function(b){b.onclick=function(){tool=b.dataset.t;document.querySelectorAll("[data-t]").forEach(function(x){x.setAttribute("aria-pressed",x===b)})}});
+document.getElementById("pause").onclick=function(e){paused=!paused;e.target.textContent=paused?"Reprendre":"Pause"};
+document.getElementById("reset").onclick=reset;
+nI.oninput=function(){document.getElementById("nv").textContent=nI.value;while(ants.length<+nI.value)ants.push(newAnt());ants.length=+nI.value};
+evI.oninput=function(){document.getElementById("evv").textContent=evI.value};
+reset();loop();
+})();
+</script>
+</body>
+</html>
