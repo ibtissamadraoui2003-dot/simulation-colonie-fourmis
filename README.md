@@ -57,10 +57,9 @@ HTML, CSS et JavaScript, sans bibliothèque externe (rendu avec Canvas 2D).
 
 ## Auteurs
 
-[@ibtissamdraoui2003](https://github.com/ibtissamadraoui2003-dot)
-[@Yayalaaziz](https://github.com/Yayalaazizi)
+[@ibtissamdraoui2003](https://github.com/ibtissamadraoui2003-dot),
+[@Yayalaaziz](https://github.com/Yayalaazizi),
 [@maj-bakh](https://github.com/maj-bakh)
 
-Master IADAIG – Academic Year 2026–2027.
 
 Master IADAIG – Academic Year 2026–2027.
