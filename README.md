@@ -57,4 +57,10 @@ HTML, CSS et JavaScript, sans bibliothèque externe (rendu avec Canvas 2D).
 
 ## Auteurs
 
-Ibtissam. Draoui, Aya. Laazizi, Majda Bakhari – Master IADAIG, année universitaire 2026–2027.
+Ibtissam Draoui (@ibtissamdraoui2003),  
+Aya Laazizi (@Yayalaaziz),  
+Majda BAKHARI (@Maj-Bakh)
+
+Master IADAIG – Academic Year 2026–2027.
+
+Master IADAIG – Academic Year 2026–2027.
