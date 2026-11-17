@@ -62,4 +62,4 @@ HTML, CSS et JavaScript, sans bibliothèque externe (rendu avec Canvas 2D).
 [@maj-bakh](https://github.com/maj-bakh)
 
 
-Master IADAIG – Academic Year 2026–2027.
+Master IADAIG – Année universitaire 2026–2027.
